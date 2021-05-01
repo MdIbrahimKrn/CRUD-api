@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="css/style.css" />
+    <title>CRUD api</title>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="container-header">
+          <div class="header-title">
+            <h3>CRUD api project</h3>
+            <div class="search-fild">
+              <label for="">Search...</label>
+              <input type="text" name="data-search" id="search" />
+            </div>
+          </div>
+          <form id="in-form">
+            <div class="input-groupe">
+              <label for="">Name..</label>
+              <input type="text" name="sname" />
+            </div>
+            <div class="input-groupe">
+              <label for="">Age..</label>
+              <input type="text" name="sage" />
+            </div>
+            <div class="input-groupe">
+              <label for="">city..</label>
+              <input type="text" name="scity" />
+            </div>
+            <input type="submit" id="in-data" value="Save" />
+          </form>
+        </div>
+      </header>
+      <main>
+        <div class="container-body">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 20px">
+                  select all<input
+                    type="checkbox"
+                    value="select"
+                    id="select-all"
+                  />
+                </th>
+                <th>Id</th>
+                <th>Fullname</th>
+                <th>Age</th>
+                <th>City</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <button
+            style="display: block; margin: 20px 0px 0px 100px"
+            id="delete-all"
+          >
+            Delete
+          </button>
+        </div>
+        <div id="modal">
+          <div id="modal-container">
+            <div id="modal-box">
+              <span id="close">X</span>
+              <form id="up-form">
+                <h3>Up Data</h3>
+                <div class="input-groupe">
+                  <label for="">Name..</label>
+                  <input type="text" id="up-id" name="up-id" hidden />
+                  <input type="text" id="up-name" name="up-name" />
+                </div>
+                <div class="input-groupe">
+                  <label for="">Age..</label>
+                  <input type="text" id="up-age" name="up-age" />
+                </div>
+                <div class="input-groupe">
+                  <label for="">city..</label>
+                  <input type="text" id="up-city" name="up-city" />
+                </div>
+                <button type="submit" id="up-data">Update</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="../jquery-3.5.1.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        document.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+        });
+
+        // form data to json converted
+        function jsonData(target) {
+          let jsonData = $(target).serializeArray();
+          let obj = {};
+
+          for (let i = 0; i < jsonData.length; i++) {
+            if (jsonData[i].value == "") {
+              return false;
+            }
+            obj[jsonData[i].name] = jsonData[i].value;
+          }
+          return JSON.stringify(obj);
+        }
+
+        // function for error & success message
+        function message(text, status, el) {
+          const x = el.pageX,
+            y = el.pageY;
+          let col, bg, br;
+          if (status == true) {
+            col = "green";
+            br = "1px solid green";
+            bg = "rgb(148, 216, 148)";
+          } else if (status == false) {
+            col = "red";
+            br = "1px solid red";
+            bg = "rgb(235, 120, 100)";
+          }
+          let text1 = $("<div></div>")
+            .text(text)
+            .attr("id", "error")
+            .css({
+              position: "absolute",
+              top: y + "px",
+              left: x + "px",
+              color: col,
+              backgroundColor: bg,
+              border: br,
+            });
+          $("body").append(text1);
+          setTimeout(function () {
+            $("#error").remove();
+          }, 2000);
+        }
+
+        // Fetch all Records
+        function loadData() {
+          $("tbody").html("");
+          $.ajax({
+            url: "http://localhost/CRUD-api/all-data.php",
+            type: "GET",
+            success: function (data) {
+              //get data
+
+              let Output = "";
+              if (data.status == false) {
+                //if data not found
+                Output = `<tr><td colspan='6'> ${data.massage} </td></tr>`;
+              } else {
+                $.each(data, (key, value) => {
+                  Output += `<tr>
+                <td style='width:20px'><input type='checkbox' class="checkbox"  value='${value["ID"]}' ></td>
+                <td>${value["ID"]}</td>
+                <td>${value["Name"]}</td>
+                <td>${value["Age"]}</td>
+                <td>${value["City"]}</td>
+                <td>
+                  <button class="action-btn" data-eid="${value["ID"]}" id="edite-btn">Edite</button>
+                  <button class="action-btn" data-did="${value["ID"]}" id="delete-btn">Delete</button>
+                </td>
+              </tr>`;
+                });
+              }
+              $("tbody").append(Output);
+              const checkAll = document.getElementById("select-all");
+              const check = document.querySelectorAll(".checkbox");
+              selectAll(checkAll, check);
+            },
+          });
+        }
+        loadData();
+
+        // Fetch single record
+        $(document).on("click", "#edite-btn", function (el) {
+          const eid = $(this).data("eid");
+          $("#modal").fadeIn("slow");
+          $.ajax({
+            url: `http://localhost/CRUD-api/single-data.php?eid=${eid}`,
+            type: "GET",
+            success: function (data) {
+              // console.log(data);
+
+              $("#up-id").val(data[0].ID);
+              $("#up-name").val(data[0].Name);
+              $("#up-age").val(data[0].Age);
+              $("#up-city").val(data[0].City);
+            },
+          });
+        });
+
+        // inset data
+        $("#in-data").click(function (el) {
+          el.preventDefault();
+          let json_str = jsonData("#in-form");
+          if (json_str == false) {
+            message("all fild is requer", false, el);
+          } else {
+            $.ajax({
+              url: "http://localhost/CRUD-api/api-insert.php",
+              type: "POST",
+              data: json_str,
+              success: function (data) {
+                message(data.message, data.status, el);
+                loadData();
+              },
+            });
+          }
+          $("#in-form").trigger("reset");
+        });
+
+        // update data
+        $("#up-data").click(function (el) {
+          el.preventDefault();
+          let json_str = jsonData("#up-form");
+          if (json_str == false) {
+            message("all fild is requer", false, el);
+          } else {
+            $.ajax({
+              url: "http://localhost/CRUD-api/api-update.php",
+              type: "POST",
+              data: json_str,
+              success: function (data) {
+                $("#modal").fadeOut();
+                message(data.message, data.status, el);
+                loadData();
+              },
+            });
+          }
+        });
+
+        // delete data api
+        $(document).on("click", "#delete-btn", function (el) {
+          el.preventDefault();
+          const d_id = $(this).data("did");
+          const parent = $(this).parents("tr");
+          const per = confirm("Are you sure deleted tha data?");
+          if (per) {
+            $.ajax({
+              url: "http://localhost/CRUD-api/api-delete.php?did=" + d_id,
+              type: "GET",
+              success: function (data) {
+                // alert(data);
+                message(data.message, data.status, el);
+                parent.empty();
+                // loadData();
+              },
+            });
+          }
+        });
+
+        //colse modal
+        $("#close").on("click", () => {
+          $("#modal").fadeOut("slow");
+        });
+
+        // search data
+        $("#search").on("keyup", function () {
+          const val = $(this).val();
+          if (val == "") {
+            loadData();
+          } else {
+            $.ajax({
+              url: `http://localhost/CRUD-api/search.php?search=${val}`,
+              type: "GET",
+              success: function (data) {
+                $("tbody").html("");
+                let Output = "";
+                if (data.status == false) {
+                  //if data not found
+                  Output = `<tr><td colspan='6'> ${data.massage} </td></tr>`;
+                } else {
+                  $.each(data, (key, value) => {
+                    Output += `<tr>
+                <td style='width:20px'><input type='checkbox' class="checkbox"  value='${value["ID"]}' ></td>
+                <td>${value["ID"]}</td>
+                <td>${value["Name"]}</td>
+                <td>${value["Age"]}</td>
+                <td>${value["City"]}</td>
+                <td>
+                  <button class="action-btn" data-eid="${value["ID"]}" id="edite-btn">Edite</button>
+                  <button class="action-btn" data-did="${value["ID"]}" id="delete-btn">Delete</button>
+                </td>
+              </tr>`;
+                  });
+                }
+                $("tbody").append(Output);
+                const checkAll = document.getElementById("select-all");
+                const check = document.querySelectorAll(".checkbox");
+                selectAll(checkAll, check);
+              },
+            });
+          }
+        });
+
+        // seleck all data system
+        function selectAll(pe, ce) {
+          const a = pe,
+            b = ce;
+          a.checked == true ? (a.checked = false) : null;
+          function checked(bol, el) {
+            el.forEach((val) => (val.checked = bol));
+          }
+          a.addEventListener("change", () => {
+            a.checked == true ? checked(true, b) : checked(false, b);
+          });
+
+          b.forEach((val) => {
+            val.addEventListener("change", () => {
+              let x = 0,
+                y = 0;
+              b.forEach((xx) => (xx.checked != true ? (y = 1) : null));
+              y == 0 ? (a.checked = true) : (a.checked = false);
+            });
+          });
+        }
+
+        // delete all data
+        $("#delete-all").click((el) => {
+          let a = [];
+          $(".checkbox:checked").each((ind, val) => {
+            a.push($(val).val());
+          });
+          if (a.length != 0) {
+            if (confirm("do you want to delete this record?")) {
+              let mdid = a.toString();
+              // console.log(mdid);
+              $.ajax({
+                url: "http://localhost/CRUD-api/api-delete-mutiple.php?",
+                type: "POST",
+                data: mdid,
+                success: function (data) {
+                  // alert(data);
+                  message(data.message, data.status, el);
+                  $(".checkbox:checked").each((ind, val) => {
+                    $(val).parents("tr").empty();
+                  });
+                  // parent.fadeOut("slow");
+                  // loadData();
+                },
+              });
+            }
+          } else {
+            message("Data Not Found", false, el);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
